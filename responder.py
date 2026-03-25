@@ -1,8 +1,45 @@
 from groq import Groq
-from config import GROQ_API_KEY, GROQ_MODEL
+from config import GROQ_API_KEY, GROQ_MODEL, TAVILY_API_KEY
 from emotion_engine import get_persona, detect_crisis
 
 client = Groq(api_key=GROQ_API_KEY)
+
+STUDY_KEYWORDS = [
+    "what is", "what are", "what was", "what were",
+    "what does", "what do", "what did", "what will",
+    "how does", "how do", "how did", "how is", "how are",
+    "how to", "how can", "how should",
+    "why does", "why do", "why did", "why is", "why are",
+    "who is", "who was", "who are", "who were", "who invented",
+    "when did", "when was", "when is", "when were",
+    "where is", "where did", "where does",
+    "which is", "which are", "which was",
+    "explain", "define", "definition of",
+    "tell me about", "describe", "elaborate",
+    "summarise", "summarize", "overview of",
+    "introduction to", "basics of", "fundamentals of",
+    "meaning of", "concept of",
+    "difference between", "compare", "comparison of",
+    " vs ", "versus", "pros and cons",
+    "advantages", "disadvantages", "benefits of",
+    "drawbacks of", "limitations of",
+    "examples of", "example of", "types of", "kinds of",
+    "categories of",
+    "what causes", "what caused", "reason for",
+    "effect of", "effects of", "impact of", "result of",
+    "history of", "origin of", "invented by",
+    "latest", "recent", "current", "news about",
+    "update on", "what happened", "developments in",
+]
+
+
+def clean_history(conversation_history):
+    return [
+        {"role": m["role"], "content": m["content"]}
+        for m in conversation_history
+        if m.get("role") in ["user", "assistant"] and m.get("content")
+    ]
+
 
 def build_system_prompt(emotion, persona):
     return f"""You are Raven, an emotionally aware AI assistant.
@@ -16,6 +53,7 @@ Core rules:
 - Keep responses concise but warm
 - Never mention that you are detecting emotions
 - Just naturally respond in the right tone"""
+
 
 def get_response(user_message, emotion, conversation_history):
     if detect_crisis(user_message):
@@ -32,7 +70,7 @@ I'm here to talk if you need me."""
     system_prompt = build_system_prompt(emotion, persona)
 
     messages = [{"role": "system", "content": system_prompt}]
-    messages += conversation_history[-10:]
+    messages += clean_history(conversation_history[-10:])
     messages.append({"role": "user", "content": user_message})
 
     response = client.chat.completions.create(
@@ -44,37 +82,36 @@ I'm here to talk if you need me."""
 
     return response.choices[0].message.content.strip()
 
+
 def search_and_respond(user_message, emotion, conversation_history):
     try:
-        from tavily import TavilyClient
-        from config import TAVILY_API_KEY
+        needs_search = any(kw in user_message.lower() for kw in STUDY_KEYWORDS)
 
-        study_keywords = [
-            "what is", "explain", "how does", "define", "tell me about",
-            "who is", "when did", "why does", "difference between"
-        ]
-        needs_search = any(kw in user_message.lower() for kw in study_keywords)
-
-        if needs_search:
+        if needs_search and TAVILY_API_KEY:
+            from tavily import TavilyClient
             tavily = TavilyClient(api_key=TAVILY_API_KEY)
             results = tavily.search(query=user_message, max_results=3)
-            context = "\n".join([r["content"] for r in results.get("results", [])])
+            context = "\n".join([
+                r["content"] for r in results.get("results", [])
+                if r.get("content")
+            ])
 
-            persona = get_persona(emotion)
-            system_prompt = build_system_prompt(emotion, persona)
-            system_prompt += f"\n\nWeb search context (use this to answer accurately):\n{context}"
+            if context:
+                persona = get_persona(emotion)
+                system_prompt = build_system_prompt(emotion, persona)
+                system_prompt += f"\n\nWeb search context (use this to answer accurately):\n{context}"
 
-            messages = [{"role": "system", "content": system_prompt}]
-            messages += conversation_history[-10:]
-            messages.append({"role": "user", "content": user_message})
+                messages = [{"role": "system", "content": system_prompt}]
+                messages += clean_history(conversation_history[-10:])
+                messages.append({"role": "user", "content": user_message})
 
-            response = client.chat.completions.create(
-                model=GROQ_MODEL,
-                messages=messages,
-                max_tokens=600,
-                temperature=0.7,
-            )
-            return response.choices[0].message.content.strip(), True
+                response = client.chat.completions.create(
+                    model=GROQ_MODEL,
+                    messages=messages,
+                    max_tokens=600,
+                    temperature=0.7,
+                )
+                return response.choices[0].message.content.strip(), True
 
     except Exception:
         pass
