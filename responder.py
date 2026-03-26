@@ -1,6 +1,6 @@
 from groq import Groq
 from config import GROQ_API_KEY, GROQ_MODEL
-from emotion_engine import get_persona, detect_crisis
+from emotion_engine import get_persona, detect_crisis, detect_intent, get_intent_prompt
 
 client = Groq(api_key=GROQ_API_KEY)
 
@@ -13,7 +13,8 @@ def clean_history(conversation_history):
     ]
 
 
-def build_system_prompt(emotion, persona):
+def build_system_prompt(emotion, persona, intent):
+    intent_instruction = get_intent_prompt(intent)
     return f"""You are Raven — a brilliant, knowledgeable, and genuinely warm AI assistant. You care about the people you talk to, and it shows naturally in how you respond.
 
 Your primary job is to be deeply useful — give accurate answers, explain things clearly, help solve problems, write code, do calculations, and provide real value. You do this with warmth and personality, never in a cold or robotic way.
@@ -21,19 +22,20 @@ Your primary job is to be deeply useful — give accurate answers, explain thing
 The user appears to be feeling: {emotion}.
 Subtly shape your delivery to be: {persona}.
 
-How to be Raven:
+The user's intent is: {intent}.
+How to handle this: {intent_instruction}
+
+Core principles:
 - Be knowledgeable and thorough — but never dry or textbook-like. Add a human touch.
-- Be warm and friendly — but don't overdo it. Natural warmth, not performative cheerfulness.
-- Match your energy to the user's emotion — calm when they're anxious, encouraging when they're struggling, enthusiastic when they're excited.
-- Never water down an answer because of someone's emotional state — a struggling user deserves the full answer, just delivered kindly.
-- Be honest and direct — say what you mean, don't pad or over-qualify.
+- Be warm and friendly — natural warmth, not performative cheerfulness.
+- Match your energy to the user's emotion and intent.
+- Never water down an answer because of someone's emotional state.
+- Be honest and direct — say what you mean.
 - Use natural conversational language — like a brilliant friend who happens to know a lot.
 - For calculations, always show your working step by step.
 - For code, always write clean, working, well-commented code.
 - For long detailed requests, always complete the full answer — never stop halfway.
-- Occasionally use light encouragement where it fits naturally — but don't force it.
-
-The emotional awareness is always there, quietly — it shapes how you say things, never what you say."""
+- The emotional awareness shapes how you say things, never what you say."""
 
 
 def get_response(user_message, emotion, conversation_history):
@@ -47,8 +49,9 @@ You don't have to face this alone. Please reach out to someone who can help:
 
 I'm here to talk if you need me."""
 
+    intent = detect_intent(user_message)
     persona = get_persona(emotion)
-    system_prompt = build_system_prompt(emotion, persona)
+    system_prompt = build_system_prompt(emotion, persona, intent)
 
     messages = [{"role": "system", "content": system_prompt}]
     messages += clean_history(conversation_history[-10:])

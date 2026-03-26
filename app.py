@@ -1,5 +1,5 @@
 import streamlit as st
-from emotion_engine import detect_emotion
+from emotion_engine import detect_emotion, detect_intent
 from responder import search_and_respond, get_response
 
 st.set_page_config(
@@ -15,6 +15,8 @@ if "emotion_log" not in st.session_state:
     st.session_state.emotion_log = []
 if "current_emotion" not in st.session_state:
     st.session_state.current_emotion = "neutral"
+if "current_intent" not in st.session_state:
+    st.session_state.current_intent = "casual"
 
 EMOTION_STYLE = {
     "happy":    {"emoji": "😊", "color": "#F59E0B"},
@@ -23,6 +25,14 @@ EMOTION_STYLE = {
     "angry":    {"emoji": "😤", "color": "#F87171"},
     "confused": {"emoji": "😕", "color": "#34D399"},
     "neutral":  {"emoji": "😐", "color": "#9CA3AF"},
+}
+
+INTENT_STYLE = {
+    "venting":  {"emoji": "💬", "label": "Venting"},
+    "question": {"emoji": "🔍", "label": "Question"},
+    "advice":   {"emoji": "💡", "label": "Advice"},
+    "casual":   {"emoji": "😌", "label": "Casual"},
+    "crisis":   {"emoji": "🆘", "label": "Crisis"},
 }
 
 # Sidebar
@@ -42,6 +52,18 @@ with st.sidebar:
         f"<div style='background:#1e1e2e;padding:12px;border-radius:10px;"
         f"border-left:4px solid {color};font-size:18px;'>"
         f"{emoji} <b style='color:{color}'>{label}</b></div>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown("<div style='margin-top:10px'></div>", unsafe_allow_html=True)
+
+    intent = st.session_state.current_intent
+    intent_info = INTENT_STYLE.get(intent, INTENT_STYLE["casual"])
+    st.markdown(
+        f"<div style='background:#1e1e2e;padding:10px;border-radius:10px;"
+        f"border-left:4px solid #6B7280;font-size:14px;'>"
+        f"{intent_info['emoji']} <b style='color:#9CA3AF'>Intent:</b> "
+        f"<span style='color:#E5E7EB'>{intent_info['label']}</span></div>",
         unsafe_allow_html=True
     )
 
@@ -68,6 +90,7 @@ with st.sidebar:
         st.session_state.messages = []
         st.session_state.emotion_log = []
         st.session_state.current_emotion = "neutral"
+        st.session_state.current_intent = "casual"
         st.rerun()
 
     if st.session_state.messages:
@@ -90,6 +113,25 @@ with st.sidebar:
             )
             st.info(summary)
 
+        # Export conversation
+        if st.button("📥 Export chat"):
+            import pandas as pd
+            export_data = []
+            for msg in st.session_state.messages:
+                export_data.append({
+                    "role": msg.get("role", ""),
+                    "content": msg.get("content", ""),
+                    "emotion": msg.get("emotion", ""),
+                })
+            df = pd.DataFrame(export_data)
+            csv = df.to_csv(index=False)
+            st.download_button(
+                label="Download CSV",
+                data=csv,
+                file_name="raven_conversation.csv",
+                mime="text/csv"
+            )
+
 # Main chat
 st.markdown("## 🐦‍⬛ Raven")
 st.markdown("*An emotionally aware AI — senses how you feel, responds accordingly*")
@@ -103,13 +145,18 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         if role == "user":
             emo = msg.get("emotion", "neutral")
+            intent = msg.get("intent", "casual")
             s = EMOTION_STYLE.get(emo, EMOTION_STYLE["neutral"])
             s_color = s["color"]
             s_emoji = s["emoji"]
+            i_info = INTENT_STYLE.get(intent, INTENT_STYLE["casual"])
             st.markdown(
                 f"<span style='background:{s_color}22;padding:2px 8px;"
-                f"border-radius:10px;font-size:12px;color:{s_color}'>"
-                f"{s_emoji} {emo}</span>",
+                f"border-radius:10px;font-size:12px;color:{s_color};margin-right:6px'>"
+                f"{s_emoji} {emo}</span>"
+                f"<span style='background:#1e1e2e;padding:2px 8px;"
+                f"border-radius:10px;font-size:12px;color:#9CA3AF'>"
+                f"{i_info['emoji']} {i_info['label']}</span>",
                 unsafe_allow_html=True
             )
         st.markdown(content)
@@ -117,12 +164,15 @@ for msg in st.session_state.messages:
 # Chat input
 if user_input := st.chat_input("Talk to Raven..."):
     primary_emotion, secondary_emotion = detect_emotion(user_input)
+    intent = detect_intent(user_input)
     st.session_state.current_emotion = primary_emotion
+    st.session_state.current_intent = intent
 
     st.session_state.messages.append({
         "role": "user",
         "content": user_input,
-        "emotion": primary_emotion
+        "emotion": primary_emotion,
+        "intent": intent
     })
     st.session_state.emotion_log.append((user_input, primary_emotion))
 
@@ -130,10 +180,14 @@ if user_input := st.chat_input("Talk to Raven..."):
         s = EMOTION_STYLE.get(primary_emotion, EMOTION_STYLE["neutral"])
         s_color = s["color"]
         s_emoji = s["emoji"]
+        i_info = INTENT_STYLE.get(intent, INTENT_STYLE["casual"])
         st.markdown(
             f"<span style='background:{s_color}22;padding:2px 8px;"
-            f"border-radius:10px;font-size:12px;color:{s_color}'>"
-            f"{s_emoji} {primary_emotion}</span>",
+            f"border-radius:10px;font-size:12px;color:{s_color};margin-right:6px'>"
+            f"{s_emoji} {primary_emotion}</span>"
+            f"<span style='background:#1e1e2e;padding:2px 8px;"
+            f"border-radius:10px;font-size:12px;color:#9CA3AF'>"
+            f"{i_info['emoji']} {i_info['label']}</span>",
             unsafe_allow_html=True
         )
         st.markdown(user_input)

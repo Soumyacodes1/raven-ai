@@ -5,10 +5,48 @@ from config import GROQ_API_KEY, GROQ_MODEL_FAST, EMOTIONS, EMOTION_PERSONAS, CR
 
 client = Groq(api_key=GROQ_API_KEY)
 
+INTENTS = ["venting", "question", "advice", "casual", "crisis"]
+
+INTENT_PROMPTS = {
+    "venting":  "The user is venting and needs to feel heard. Acknowledge their feelings first, then gently offer help if appropriate.",
+    "question":  "The user wants a clear, accurate, informative answer. Be thorough and direct.",
+    "advice":    "The user wants your opinion or recommendation. Be honest, thoughtful, and give a clear suggestion.",
+    "casual":    "The user is just having a casual conversation. Be relaxed, friendly, and natural.",
+    "crisis":    "The user may be in distress. Be gentle, supportive, and prioritise their wellbeing.",
+}
+
 
 def detect_crisis(text):
     text_lower = text.lower()
     return any(keyword in text_lower for keyword in CRISIS_KEYWORDS)
+
+
+def detect_intent(text):
+    prompt = f"""You are an intent classifier. Classify the intent of the user message into exactly one of these categories:
+- venting: user is expressing frustration, sadness, or strong emotion and wants to be heard
+- question: user wants information, explanation, or facts
+- advice: user wants a recommendation, suggestion, or opinion
+- casual: user is making small talk or having a general conversation
+- crisis: user seems to be in serious emotional distress or danger
+
+Reply with ONLY the intent word, nothing else.
+
+Message: "{text}"
+
+Intent:"""
+
+    try:
+        response = client.chat.completions.create(
+            model=GROQ_MODEL_FAST,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=10,
+            temperature=0.0,
+        )
+        result = response.choices[0].message.content.strip().lower()
+        result = ''.join(c for c in result if c.isalpha())
+        return result if result in INTENTS else "casual"
+    except Exception:
+        return "casual"
 
 
 def detect_emotion_groq(text):
@@ -74,3 +112,7 @@ def detect_emotion(text):
 
 def get_persona(emotion):
     return EMOTION_PERSONAS.get(emotion, EMOTION_PERSONAS["neutral"])
+
+
+def get_intent_prompt(intent):
+    return INTENT_PROMPTS.get(intent, INTENT_PROMPTS["casual"])
