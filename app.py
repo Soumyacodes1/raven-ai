@@ -8,7 +8,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ── Session state ─────────────────────────────────────────────────────────────
+# Session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "emotion_log" not in st.session_state:
@@ -16,7 +16,6 @@ if "emotion_log" not in st.session_state:
 if "current_emotion" not in st.session_state:
     st.session_state.current_emotion = "neutral"
 
-# ── Emotion styling ───────────────────────────────────────────────────────────
 EMOTION_STYLE = {
     "happy":    {"emoji": "😊", "color": "#F59E0B"},
     "sad":      {"emoji": "😔", "color": "#60A5FA"},
@@ -26,7 +25,7 @@ EMOTION_STYLE = {
     "neutral":  {"emoji": "😐", "color": "#9CA3AF"},
 }
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# Sidebar
 with st.sidebar:
     st.markdown("# 🐦‍⬛ Raven AI")
     st.markdown("*Thought. Memory. Empathy.*")
@@ -91,7 +90,7 @@ with st.sidebar:
             )
             st.info(summary)
 
-# ── Main chat area ────────────────────────────────────────────────────────────
+# Main chat
 st.markdown("## 🐦‍⬛ Raven")
 st.markdown("*An emotionally aware AI — senses how you feel, responds accordingly*")
 st.divider()
@@ -111,11 +110,6 @@ for msg in st.session_state.messages:
                 f"<span style='background:{s_color}22;padding:2px 8px;"
                 f"border-radius:10px;font-size:12px;color:{s_color}'>"
                 f"{s_emoji} {emo}</span>",
-                unsafe_allow_html=True
-            )
-        elif role == "assistant" and msg.get("used_search"):
-            st.markdown(
-                "<span style='font-size:11px;color:#6B7280;'>🔍 searched the web</span>",
                 unsafe_allow_html=True
             )
         st.markdown(content)
@@ -151,19 +145,13 @@ if user_input := st.chat_input("Talk to Raven..."):
                 for m in st.session_state.messages[:-1]
                 if m.get("role") in ["user", "assistant"] and m.get("content")
             ]
-            response, used_search = search_and_respond(
+            response, _ = search_and_respond(
                 user_input, primary_emotion, clean_msgs
             )
-            if used_search:
-                st.markdown(
-                    "<span style='font-size:11px;color:#6B7280;'>🔍 searched the web</span>",
-                    unsafe_allow_html=True
-                )
             st.markdown(response)
 
     st.session_state.messages.append({
         "role": "assistant",
-        "content": response,
-        "used_search": used_search
+        "content": response
     })
     st.rerun()
