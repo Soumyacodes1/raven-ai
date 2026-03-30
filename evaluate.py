@@ -19,7 +19,7 @@ from sklearn.metrics import (
     accuracy_score, precision_score,
     recall_score, f1_score, confusion_matrix, classification_report
 )
-from config import GROQ_API_KEY, GROQ_MODEL_FAST
+from config import GROQ_API_KEY, GROQ_MODEL_EVAL
 
 client = Groq(api_key=GROQ_API_KEY)
 
@@ -123,7 +123,7 @@ Text: "{text}"
 Emotion:"""
     try:
         response = client.chat.completions.create(
-            model=GROQ_MODEL_FAST,
+            model=GROQ_MODEL_EVAL,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=10,
             temperature=0.0,
@@ -155,7 +155,7 @@ Text: "{text}"
 Emotion:"""
     try:
         response = client.chat.completions.create(
-            model=GROQ_MODEL_FAST,
+            model=GROQ_MODEL_EVAL,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=10,
             temperature=0.0,

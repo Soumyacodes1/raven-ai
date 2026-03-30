@@ -1,5 +1,5 @@
 from groq import Groq
-from config import GROQ_API_KEY, GROQ_MODEL
+from config import GROQ_API_KEY, GROQ_MODEL, GROQ_MODEL_FAST
 from emotion_engine import get_persona, detect_crisis, detect_intent, get_intent_prompt
 
 client = Groq(api_key=GROQ_API_KEY)
@@ -11,6 +11,23 @@ def clean_history(conversation_history):
         for m in conversation_history
         if m.get("role") in ["user", "assistant"] and m.get("content")
     ]
+
+
+INTENT_TEMPERATURES = {
+    "coding":    0.5,
+    "learning":  0.5,
+    "deep_dive": 0.6,
+    "question":  0.65,
+    "creative":  0.85,
+    "venting":   0.75,
+    "advice":    0.7,
+    "casual":    0.75,
+    "crisis":    0.6,
+}
+
+
+def get_temperature(intent):
+    return INTENT_TEMPERATURES.get(intent, 0.75)
 
 
 def build_system_prompt(emotion, persona, intent):
@@ -33,7 +50,11 @@ Core principles:
 - Be honest and direct — say what you mean.
 - Use natural conversational language — like a brilliant friend who happens to know a lot.
 - For calculations, always show your working step by step.
-- For code, always write clean, working, well-commented code.
+- For code, always write clean, working, well-commented code. Use proper language-tagged code blocks (```python, ```javascript, etc.). If the problem is complex, break it into steps.
+- For GK, science, history, or conceptual questions, be comprehensive and accurate. Use structured format (headings, bullet points) for long answers. Include interesting context and connections.
+- For creative writing, match the user's creative vision. Be vivid, original, and expressive.
+- For deep dives, be exhaustive. Use sections, examples, and analogies. Never truncate — complete the full answer.
+- If the user asks for something long or detailed, ALWAYS deliver the full content. Never say "I'll keep it brief" unless the user asks for brevity.
 - For long detailed requests, always complete the full answer — never stop halfway.
 - The emotional awareness shapes how you say things, never what you say."""
 
@@ -49,20 +70,30 @@ You don't have to face this alone. Please reach out to someone who can help:
 
 I'm here to talk if you need me."""
 
-    intent = detect_intent(user_message)
+    intent = detect_intent(user_message, emotion)
     persona = get_persona(emotion)
     system_prompt = build_system_prompt(emotion, persona, intent)
+    temp = get_temperature(intent)
 
     messages = [{"role": "system", "content": system_prompt}]
-    messages += clean_history(conversation_history[-10:])
+    messages += clean_history(conversation_history[-20:])
     messages.append({"role": "user", "content": user_message})
 
-    response = client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=messages,
-        max_tokens=2048,
-        temperature=0.75,
-    )
+    # Try 70B first, fall back to 8B automatically if limit hit
+    try:
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=messages,
+            max_tokens=4096,
+            temperature=temp,
+        )
+    except Exception:
+        response = client.chat.completions.create(
+            model=GROQ_MODEL_FAST,
+            messages=messages,
+            max_tokens=4096,
+            temperature=temp,
+        )
 
     return response.choices[0].message.content.strip()
 

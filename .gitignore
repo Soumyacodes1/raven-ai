@@ -17,3 +17,6 @@ env/
 *.csv
 *.json
 data/
+
+# Model checkpoints (hosted on HuggingFace Hub)
+emotion_model*/

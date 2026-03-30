@@ -4,12 +4,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-HF_API_KEY = os.getenv("HF_API_KEY")
+HF_API_KEY   = os.getenv("HF_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
-GROQ_MODEL = "llama-3.3-70b-versatile"
-GROQ_MODEL_FAST = "llama-3.1-8b-instant"
+# ── Models ────────────────────────────────────────────────────────────────────
+GROQ_MODEL      = "llama-3.3-70b-versatile"  # response generation (primary)
+GROQ_MODEL_FAST = "llama-3.1-8b-instant"     # intent detection + emotion fallback
+GROQ_MODEL_EVAL = "llama-3.3-70b-versatile"  # evaluation experiments only
 
+HF_EMOTION_MODEL = "SoumyaCodes/raven-emotion-distilbert"  # Fine-tuned DistilBERT — 97.62% on personal data
+
+# ── Emotions & personas ───────────────────────────────────────────────────────
 EMOTIONS = ["happy", "sad", "anxious", "angry", "confused", "neutral"]
 
 EMOTION_PERSONAS = {
@@ -21,8 +26,8 @@ EMOTION_PERSONAS = {
     "neutral":  "friendly, balanced, and helpful",
 }
 
+# ── Crisis keywords ───────────────────────────────────────────────────────────
 CRISIS_KEYWORDS = [
-    # Direct statements
     "suicide", "kill myself", "end my life", "want to die",
     "wish i was dead", "better off dead", "end it all",
     "want it all to stop", "no point in anything",
@@ -30,10 +35,8 @@ CRISIS_KEYWORDS = [
     "don't want to be here", "dont want to be here",
     "want to disappear forever", "give up on life",
     "can't go on", "cannot go on", "cant go on",
-    # Self harm
     "self harm", "self-harm", "hurt myself", "cut myself",
     "harm myself", "injure myself", "punish myself",
-    # Hopelessness
     "no hope", "completely hopeless", "nothing to live for",
     "life is pointless", "life is meaningless",
     "nobody cares about me", "everyone would be better without me",
@@ -41,7 +44,6 @@ CRISIS_KEYWORDS = [
     "world is better without me", "tired of living",
     "don't want to exist", "dont want to exist",
     "wish i never existed", "wish i wasnt born",
-    # Indirect
     "final goodbye", "last goodbye", "saying goodbye forever",
     "won't be here anymore", "wont be here anymore",
     "ending things", "ending everything",
