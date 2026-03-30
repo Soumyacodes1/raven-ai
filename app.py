@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Agg")
-from emotion_engine import detect_emotion, detect_intent
+from emotion_engine import detect_emotion, detect_intent, detect_crisis
 from responder import search_and_respond, get_response
 
 st.set_page_config(
@@ -147,7 +147,7 @@ with st.sidebar:
             st.markdown(
                 f"<div style='font-size:12px;padding:4px 8px;margin:2px 0;"
                 f"border-radius:6px;background:#1e1e2e;"
-                f"border-left:3px solid {s[\"color\"]}'>"
+                f"border-left:3px solid {s['color']}'>"
                 f"{s['emoji']} {msg_preview[:30]}...</div>",
                 unsafe_allow_html=True
             )
@@ -220,6 +220,11 @@ if user_input := st.chat_input("Talk to Raven..."):
     )
     # Groq 8B for intent
     intent = detect_intent(user_input, primary_emotion, recent_context)
+
+    # Crisis override — if crisis keywords detected, force emotion & intent
+    if detect_crisis(user_input):
+        primary_emotion = "sad"
+        intent = "crisis"
 
     st.session_state.current_emotion = primary_emotion
     st.session_state.current_intent  = intent
