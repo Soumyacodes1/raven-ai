@@ -4,3 +4,6 @@ transformers>=4.36.0
 torch==2.6.0
 python-dotenv>=1.0.0
 matplotlib
+pandas
+PyPDF2
+duckduckgo-search>=7.0.0

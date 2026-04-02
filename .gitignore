@@ -20,3 +20,9 @@ data/
 
 # Model checkpoints (hosted on HuggingFace Hub)
 emotion_model*/
+
+# Claude Code
+.claude/
+
+# Conversation data
+.raven_conversations.json
