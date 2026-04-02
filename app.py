@@ -65,13 +65,8 @@ def load_conversations():
 # ── Custom CSS ───────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    /* Hide Streamlit branding but keep sidebar toggle visible */
-    #MainMenu {visibility: hidden;}
+    /* Hide Streamlit branding */
     footer {visibility: hidden;}
-    header {background: transparent !important;}
-    [data-testid="stToolbar"] {display: none !important;}
-    [data-testid="stDecoration"] {display: none !important;}
-    [data-testid="stStatusWidget"] {display: none !important;}
 
     .stApp {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
